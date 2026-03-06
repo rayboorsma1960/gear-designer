@@ -192,6 +192,10 @@
     <input type="range" id="faceWidth" min="5" max="50" value="20">
   </div>
   <div class="param">
+    <label>Bore Diameter (mm) <span class="val" id="vBore">5.0</span></label>
+    <input type="range" id="boreDia" min="0" max="20" step="0.5" value="5">
+  </div>
+  <div class="param">
     <label>Pressure Angle</label>
     <select id="pressure">
       <option value="14.5">14.5&deg;</option>
@@ -352,7 +356,7 @@ function buildGearProfile(numTeeth, mod, pressureAngleDeg) {
   return { pts, rootR, outerR, pitchR, baseR };
 }
 
-function buildHelicalGear(numTeeth, mod, helixDeg, faceW, pressureDeg) {
+function buildHelicalGear(numTeeth, mod, helixDeg, faceW, pressureDeg, boreDia) {
   const profile = buildGearProfile(numTeeth, mod, pressureDeg);
   const pts = profile.pts;
   const n = pts.length;
@@ -389,7 +393,25 @@ function buildHelicalGear(numTeeth, mod, helixDeg, faceW, pressureDeg) {
   }
 
   // ── Bore + annular caps (watertight manifold) ──
-  const boreR = profile.rootR * 0.3;
+  const boreR = Math.min(boreDia / 2, profile.rootR * 0.8);
+  if (boreR <= 0) {
+    // Solid gear - cap both ends with fan triangles
+    const centerBot = positions.length / 3;
+    positions.push(0, -halfW, 0); normals.push(0, -1, 0);
+    const centerTop = positions.length / 3;
+    positions.push(0, halfW, 0); normals.push(0, 1, 0);
+    for (let i = 0; i < n; i++) {
+      const next = (i + 1) % n;
+      indices.push(centerBot, next, i);
+      indices.push(centerTop, slices * n + i, slices * n + next);
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    geo.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+    geo.setIndex(indices);
+    geo.computeVertexNormals();
+    return { geo, profile };
+  }
   const boreBase = positions.length / 3;
   for (let s = 0; s <= slices; s++) {
     for (let i = 0; i < n; i++) {
@@ -437,7 +459,7 @@ function buildHelicalGear(numTeeth, mod, helixDeg, faceW, pressureDeg) {
 }
 
 // ── Herringbone (double helical) gear geometry ──
-function buildHerringboneGear(numTeeth, mod, helixDeg, faceW, pressureDeg) {
+function buildHerringboneGear(numTeeth, mod, helixDeg, faceW, pressureDeg, boreDia) {
   const profile = buildGearProfile(numTeeth, mod, pressureDeg);
   const pts = profile.pts;
   const n = pts.length;
@@ -492,7 +514,25 @@ function buildHerringboneGear(numTeeth, mod, helixDeg, faceW, pressureDeg) {
   }
 
   // ── Bore + annular caps (watertight manifold) ──
-  const boreR = profile.rootR * 0.3;
+  const boreR = Math.min(boreDia / 2, profile.rootR * 0.8);
+  if (boreR <= 0) {
+    // Solid gear - cap both ends with fan triangles
+    const centerBot = positions.length / 3;
+    positions.push(0, -halfW, 0); normals.push(0, -1, 0);
+    const centerTop = positions.length / 3;
+    positions.push(0, halfW, 0); normals.push(0, 1, 0);
+    for (let i = 0; i < n; i++) {
+      const next = (i + 1) % n;
+      indices.push(centerBot, next, i);
+      indices.push(centerTop, totalSlices * n + i, totalSlices * n + next);
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    geo.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+    geo.setIndex(indices);
+    geo.computeVertexNormals();
+    return { geo, profile };
+  }
   const boreBase = positions.length / 3;
   for (let s = 0; s <= totalSlices; s++) {
     for (let i = 0; i < n; i++) {
@@ -540,7 +580,7 @@ function buildHerringboneGear(numTeeth, mod, helixDeg, faceW, pressureDeg) {
 }
 
 // ── Bevel gear geometry ──
-function buildBevelGear(numTeeth, mod, faceW, pressureDeg, matingTeeth) {
+function buildBevelGear(numTeeth, mod, faceW, pressureDeg, matingTeeth, boreDia) {
   // Pitch cone geometry for 90° shaft angle
   const pitchConeAngle = Math.atan2(numTeeth, matingTeeth); // radians
   const profile = buildGearProfile(numTeeth, mod, pressureDeg);
@@ -594,7 +634,25 @@ function buildBevelGear(numTeeth, mod, faceW, pressureDeg, matingTeeth) {
     angles[i] = Math.atan2(pts[i].y, pts[i].x);
   }
 
-  const boreR = profile.rootR * 0.3;
+  const boreR = Math.min(boreDia / 2, profile.rootR * innerScale * 0.8);
+  if (boreR <= 0) {
+    // Solid gear - cap bottom and top with fan triangles
+    const centerBot = positions.length / 3;
+    positions.push(0, 0, 0); normals.push(0, -1, 0);
+    const centerTop = positions.length / 3;
+    positions.push(0, coneRise, 0); normals.push(0, 1, 0);
+    for (let i = 0; i < n; i++) {
+      const next = (i + 1) % n;
+      indices.push(centerBot, next, i);
+      indices.push(centerTop, slices * n + i, slices * n + next);
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    geo.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+    geo.setIndex(indices);
+    geo.computeVertexNormals();
+    return { geo, profile, pitchConeAngle, coneDistance, innerScale, coneRise };
+  }
 
   // Bore cylinder: y=0 to y=coneRise (through the cone only)
   const boreBase = positions.length / 3;
@@ -640,7 +698,7 @@ function buildBevelGear(numTeeth, mod, faceW, pressureDeg, matingTeeth) {
 }
 
 // ── Worm gear geometry ──
-function buildWormGeo(mod, starts, wormOuterDia, wormLength, pressureDeg) {
+function buildWormGeo(mod, starts, wormOuterDia, wormLength, pressureDeg, boreDia) {
   const pitch = mod * Math.PI;
   const lead = starts * pitch;
   const outerR = wormOuterDia / 2;
@@ -717,7 +775,25 @@ function buildWormGeo(mod, starts, wormOuterDia, wormLength, pressureDeg) {
   }
 
   // ── Bore + annular caps (watertight manifold) ──
-  const boreR = rootR * 0.4;
+  const boreR = Math.min(boreDia / 2, rootR * 0.8);
+  if (boreR <= 0) {
+    // Solid worm - cap both ends with fan triangles
+    const centerBot = positions.length / 3;
+    positions.push(0, -halfLen, 0); normals.push(0, -1, 0);
+    const centerTop = positions.length / 3;
+    positions.push(0, halfLen, 0); normals.push(0, 1, 0);
+    for (let r = 0; r < radialSegs; r++) {
+      const next = (r + 1) % radialSegs;
+      indices.push(centerBot, next, r);
+      indices.push(centerTop, axialSegs * radialSegs + r, axialSegs * radialSegs + next);
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    geo.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+    geo.setIndex(indices);
+    geo.computeVertexNormals();
+    return { geo, params: { pitchR, rootR, outerR, leadAngle, lead } };
+  }
   const boreBase = positions.length / 3;
   for (let s = 0; s <= axialSegs; s++) {
     const t = s / axialSegs;
@@ -903,6 +979,7 @@ function updateDimPanel() {
       <div class="dim-row"><span class="dim-label">Pitch Diameter</span><span class="dim-val">${pitchDia} mm</span></div>
       <div class="dim-row"><span class="dim-label">Root Diameter</span><span class="dim-val">${rootDia} mm</span></div>
       <div class="dim-row"><span class="dim-label">Length</span><span class="dim-val">${wLen} mm</span></div>
+      <div class="dim-row"><span class="dim-label">Bore Diameter</span><span class="dim-val">${parseFloat(document.getElementById('boreDia').value).toFixed(1)} mm</span></div>
       <div class="dim-row"><span class="dim-label">Axial Pitch</span><span class="dim-val">${pitch} mm</span></div>
       <div class="dim-row"><span class="dim-label">Lead</span><span class="dim-val">${lead} mm</span></div>
       <div class="dim-row"><span class="dim-label">Lead Angle</span><span class="dim-val">${leadAngleDeg}&deg;</span></div>
@@ -948,6 +1025,7 @@ function updateDimPanel() {
       <div class="dim-row"><span class="dim-label">Module</span><span class="dim-val">${mod.toFixed(1)} mm</span></div>
       <div class="dim-row"><span class="dim-label">Pressure Angle</span><span class="dim-val">${pressureDeg}&deg;</span></div>
       <div class="dim-row"><span class="dim-label">Shaft Angle</span><span class="dim-val">90&deg;</span></div>
+      <div class="dim-row"><span class="dim-label">Bore Diameter</span><span class="dim-val">${parseFloat(document.getElementById('boreDia').value).toFixed(1)} mm</span></div>
       <div class="dim-row" style="margin-top:8px;border-top:1px solid #555;padding-top:6px"><span class="dim-label" style="color:#8899aa;font-weight:bold">Gear 1</span><span class="dim-val"></span></div>
       <div class="dim-row"><span class="dim-label">Teeth</span><span class="dim-val">${numTeeth1}</span></div>
       <div class="dim-row"><span class="dim-label">Pitch Diameter</span><span class="dim-val">${pitchD1} mm</span></div>
@@ -1003,6 +1081,7 @@ function updateDimPanel() {
   html += `
     <div class="dim-row"><span class="dim-label">Pressure Angle</span><span class="dim-val">${pressureDeg}&deg;</span></div>
     <div class="dim-row"><span class="dim-label">Face Width</span><span class="dim-val">${faceW} mm</span></div>
+    <div class="dim-row"><span class="dim-label">Bore Diameter</span><span class="dim-val">${parseFloat(document.getElementById('boreDia').value).toFixed(1)} mm</span></div>
     <div class="dim-row"><span class="dim-label">Pitch Dia (G1)</span><span class="dim-val">${pitchD1} mm</span></div>
     <div class="dim-row"><span class="dim-label">Outer Dia (G1)</span><span class="dim-val">${outerD1} mm</span></div>
     <div class="dim-row"><span class="dim-label">Root Dia (G1)</span><span class="dim-val">${rootD1} mm</span></div>
@@ -1086,11 +1165,13 @@ function rebuild() {
   const faceW = parseInt(document.getElementById('faceWidth').value);
   const pressureDeg = parseFloat(document.getElementById('pressure').value);
   const numTeeth2 = parseInt(document.getElementById('teeth2').value);
+  const boreDia = parseFloat(document.getElementById('boreDia').value);
 
   // Update display values
   document.getElementById('vTeeth1').textContent = numTeeth1;
   document.getElementById('vHelix').textContent = helixDeg + '\u00B0';
   document.getElementById('vWidth').textContent = faceW;
+  document.getElementById('vBore').textContent = boreDia.toFixed(1);
   document.getElementById('vTeeth2').textContent = numTeeth2;
 
   // Update worm display values
@@ -1118,7 +1199,7 @@ function rebuild() {
     const wLen = parseInt(document.getElementById('wormLen').value);
 
     // Build worm (screw)
-    const worm = buildWormGeo(mod, wStarts, wDia, wLen, pressureDeg);
+    const worm = buildWormGeo(mod, wStarts, wDia, wLen, pressureDeg, boreDia);
     gear1Geo = worm.geo;
     g1Params = worm.params;
 
@@ -1130,7 +1211,7 @@ function rebuild() {
     // Worm wheel (helical gear at 90° – helix angle = worm lead angle)
     if (showGear2) {
       const wheelHelixAngle = g1Params.leadAngle * 180 / Math.PI;
-      const r2 = buildHelicalGear(numTeeth2, mod, wheelHelixAngle, faceW, pressureDeg);
+      const r2 = buildHelicalGear(numTeeth2, mod, wheelHelixAngle, faceW, pressureDeg, boreDia);
       gear2Geo = r2.geo;
       g2Params = r2.profile;
       gear2Mesh = new THREE.Mesh(gear2Geo, mat2);
@@ -1155,7 +1236,7 @@ function rebuild() {
 
   } else if (gearType === 'bevel') {
     // ── Bevel gear mode ──
-    const r1 = buildBevelGear(numTeeth1, mod, faceW, pressureDeg, numTeeth2);
+    const r1 = buildBevelGear(numTeeth1, mod, faceW, pressureDeg, numTeeth2, boreDia);
     gear1Geo = r1.geo;
     g1Params = r1.profile;
     g1Params.pitchConeAngle = r1.pitchConeAngle;
@@ -1170,7 +1251,7 @@ function rebuild() {
 
     if (showGear2) {
       // Gear2: swapped teeth counts so its cone angle = 90° - gear1's cone angle
-      const r2 = buildBevelGear(numTeeth2, mod, faceW, pressureDeg, numTeeth1);
+      const r2 = buildBevelGear(numTeeth2, mod, faceW, pressureDeg, numTeeth1, boreDia);
       gear2Geo = r2.geo;
       g2Params = r2.profile;
       g2Params.pitchConeAngle = r2.pitchConeAngle;
@@ -1212,14 +1293,14 @@ function rebuild() {
   } else {
     // ── Spur / Helical / Herringbone mode ──
     const buildFn = gearType === 'herringbone' ? buildHerringboneGear : buildHelicalGear;
-    const r1 = buildFn(numTeeth1, mod, helixDeg, faceW, pressureDeg);
+    const r1 = buildFn(numTeeth1, mod, helixDeg, faceW, pressureDeg, boreDia);
     gear1Geo = r1.geo;
     g1Params = r1.profile;
     gear1Mesh = new THREE.Mesh(gear1Geo, mat1);
     gear1Group.add(gear1Mesh);
 
     if (showGear2) {
-      const r2 = buildFn(numTeeth2, mod, -helixDeg, faceW, pressureDeg);
+      const r2 = buildFn(numTeeth2, mod, -helixDeg, faceW, pressureDeg, boreDia);
       gear2Geo = r2.geo;
       g2Params = r2.profile;
       gear2Mesh = new THREE.Mesh(gear2Geo, mat2);
@@ -1245,7 +1326,7 @@ function rebuild() {
 }
 
 // ── Event listeners ──
-['teeth1', 'helix', 'faceWidth', 'teeth2', 'wormStarts', 'wormDia', 'wormLen'].forEach(id => {
+['teeth1', 'helix', 'faceWidth', 'boreDia', 'teeth2', 'wormStarts', 'wormDia', 'wormLen'].forEach(id => {
   document.getElementById(id).addEventListener('input', rebuild);
 });
 ['module', 'pressure'].forEach(id => {
