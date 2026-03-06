@@ -588,32 +588,24 @@ function buildBevelGear(numTeeth, mod, faceW, pressureDeg, matingTeeth) {
     }
   }
 
-  // ── Watertight bore + hub + annular caps ──
-  // Profile angles are constant regardless of taper scale
+  // ── Watertight bore + annular caps (no hub extension) ──
   const angles = new Array(n);
   for (let i = 0; i < n; i++) {
     angles[i] = Math.atan2(pts[i].y, pts[i].x);
   }
 
   const boreR = profile.rootR * 0.3;
-  const hubOuterR = Math.max(pitchR * innerScale * 0.45, boreR * 2.5);
-  const hubHeight = Math.max(pitchR * 0.4, faceW * 0.5);
-  const totalHeight = coneRise + hubHeight;
-  const hubSlices = 6;
-  const totalBoreSlices = slices + hubSlices;
 
-  // Bore cylinder: y=0 through cone and hub to y=totalHeight
+  // Bore cylinder: y=0 to y=coneRise (through the cone only)
   const boreBase = positions.length / 3;
-  for (let s = 0; s <= totalBoreSlices; s++) {
-    const y = (s <= slices)
-      ? (s / slices) * coneRise
-      : coneRise + ((s - slices) / hubSlices) * hubHeight;
+  for (let s = 0; s <= slices; s++) {
+    const y = (s / slices) * coneRise;
     for (let i = 0; i < n; i++) {
       positions.push(boreR * Math.cos(angles[i]), y, boreR * Math.sin(angles[i]));
       normals.push(-Math.cos(angles[i]), 0, -Math.sin(angles[i]));
     }
   }
-  for (let s = 0; s < totalBoreSlices; s++) {
+  for (let s = 0; s < slices; s++) {
     for (let i = 0; i < n; i++) {
       const next = (i + 1) % n;
       const a = boreBase + s * n + i, b = boreBase + s * n + next;
@@ -622,48 +614,20 @@ function buildBevelGear(numTeeth, mod, faceW, pressureDeg, matingTeeth) {
     }
   }
 
-  // Hub outer surface: y=coneRise to y=totalHeight
-  const hubBase = positions.length / 3;
-  for (let s = 0; s <= hubSlices; s++) {
-    const t = s / hubSlices;
-    const y = coneRise + t * hubHeight;
-    for (let i = 0; i < n; i++) {
-      positions.push(hubOuterR * Math.cos(angles[i]), y, hubOuterR * Math.sin(angles[i]));
-      normals.push(Math.cos(angles[i]), 0, Math.sin(angles[i]));
-    }
-  }
-  for (let s = 0; s < hubSlices; s++) {
-    for (let i = 0; i < n; i++) {
-      const next = (i + 1) % n;
-      const a = hubBase + s * n + i, b = hubBase + s * n + next;
-      const c = hubBase + (s + 1) * n + next, d = hubBase + (s + 1) * n + i;
-      indices.push(a, b, c, a, c, d);
-    }
-  }
-
-  // Outer annular cap at y=0 (profile → bore, -Y normal)
+  // Bottom annular cap at y=0 (profile → bore, -Y normal)
   for (let i = 0; i < n; i++) {
     const next = (i + 1) % n;
     indices.push(i, boreBase + next, boreBase + i);
     indices.push(i, next, boreBase + next);
   }
 
-  // Inner annular cap at y=coneRise (profile → hub outer, +Y normal)
+  // Top annular cap at y=coneRise (inner cone profile → bore, +Y normal)
   for (let i = 0; i < n; i++) {
     const next = (i + 1) % n;
     const pA = slices * n + i, pB = slices * n + next;
-    const hA = hubBase + i, hB = hubBase + next;
-    indices.push(pA, hA, hB);
-    indices.push(pA, hB, pB);
-  }
-
-  // Hub top annular cap at y=totalHeight (hub outer → bore, +Y normal)
-  for (let i = 0; i < n; i++) {
-    const next = (i + 1) % n;
-    const hA = hubBase + hubSlices * n + i, hB = hubBase + hubSlices * n + next;
-    const bA = boreBase + totalBoreSlices * n + i, bB = boreBase + totalBoreSlices * n + next;
-    indices.push(hA, bA, bB);
-    indices.push(hA, bB, hB);
+    const bA = boreBase + slices * n + i, bB = boreBase + slices * n + next;
+    indices.push(pA, bB, bA);
+    indices.push(pA, pB, bB);
   }
 
   const geo = new THREE.BufferGeometry();
@@ -672,7 +636,7 @@ function buildBevelGear(numTeeth, mod, faceW, pressureDeg, matingTeeth) {
   geo.setIndex(indices);
   geo.computeVertexNormals();
 
-  return { geo, profile, pitchConeAngle, coneDistance, innerScale, coneRise, hubHeight };
+  return { geo, profile, pitchConeAngle, coneDistance, innerScale, coneRise };
 }
 
 // ── Worm gear geometry ──
