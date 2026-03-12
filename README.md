@@ -1,10 +1,21 @@
 # ISO 54 Gear Designer
 
-A free browser-based gear designer that generates 3D-printable gears to ISO 54 standards. No install required — runs in any browser on desktop or mobile.
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Launch%20App-blue?style=for-the-badge&logo=github)](https://rayboorsma1960.github.io/gear-designer/)
+[![MakerWorld](https://img.shields.io/badge/MakerWorld-Download-orange?style=for-the-badge)](https://makerworld.com/en/models/7071997)
+[![YouTube Demo](https://img.shields.io/badge/YouTube-Watch%20Demo-red?style=for-the-badge&logo=youtube)](https://www.youtube.com/watch?v=dFa5R9ZG--4)
+[![License](https://img.shields.io/badge/License-All%20Rights%20Reserved-lightgrey?style=for-the-badge)](#license)
+
+A free browser-based gear designer that generates 3D-printable gears to **ISO 54 standards**. No install required — runs in any browser on **desktop, mobile (Android & iOS), and Windows**.
 
 ## [Launch the App](https://rayboorsma1960.github.io/gear-designer/)
 
 ![Helical Gear Preview](https://raw.githubusercontent.com/rayboorsma1960/gear-designer/main/screenshots/helical.png)
+
+## Demo Video
+
+[![Watch the Demo](https://img.youtube.com/vi/dFa5R9ZG--4/maxresdefault.jpg)](https://www.youtube.com/watch?v=dFa5R9ZG--4)
+
+> Click the image above to watch the full demo on YouTube
 
 ## Features
 
@@ -31,6 +42,11 @@ A free browser-based gear designer that generates 3D-printable gears to ISO 54 s
 - Meshing gear pair animation
 - Dimension readout panel with all gear specifications
 
+### Cross-Platform
+- Works on **Windows**, **macOS**, and **Linux**
+- Fully responsive on **Android** and **iOS** devices
+- No install, no signup — just open and design
+
 ## How to Use
 
 1. **Open the app** — [rayboorsma1960.github.io/gear-designer](https://rayboorsma1960.github.io/gear-designer/)
@@ -51,6 +67,7 @@ A free browser-based gear designer that generates 3D-printable gears to ISO 54 s
 ## Links
 
 - **Live App**: [rayboorsma1960.github.io/gear-designer](https://rayboorsma1960.github.io/gear-designer/)
+- **YouTube Demo**: [Watch on YouTube](https://www.youtube.com/watch?v=dFa5R9ZG--4)
 - **MakerWorld**: [ISO 54 Gear Designer on MakerWorld](https://makerworld.com/en/models/7071997)
 
 ## License
